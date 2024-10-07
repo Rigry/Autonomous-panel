@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <iterator>
 
-
 template<size_t n, class Int = size_t>
 class SizedInt {
     Int value {0};
@@ -97,7 +96,7 @@ private:
     SizedInt<2> current {};
     bool need_erase[2] {};
     int  erase_index {0};
-    std::array<Memory, 2> memory {Memory (reinterpret_cast<Word*>(0x08020000), (128*1024 / 2)), Memory (reinterpret_cast<Word*>(0x08040000), (128*1024 / 2))};
+    std::array<Memory, 2> memory {Memory (reinterpret_cast<Word*>(0x08040000), (128*1024 / 2)), Memory (reinterpret_cast<Word*>(0x08060000), (128*1024 / 2))};
     Memory::Iterator memory_offset{{memory[0].begin()}};
     bool done_ {false};
 

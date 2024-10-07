@@ -118,8 +118,8 @@ int main(void)
   PVD_Config();
 
    struct Flash_data{
-	  uint16_t voltage = 200;
 	  uint16_t current = 30;
+	  uint8_t light = 90;
    }flash;
 
 //   decltype(auto) saver = Saver<Flash_data>(&flash);
@@ -147,6 +147,31 @@ int main(void)
 //
    decltype(auto) can = CAN<In_id, Out_id>{led_can, interrupt_can_rx, 250};
 
+   can.inID.zu.U_error_hard = 0xFFFF;
+   can.inID.zu.error_soft._1.Cap = true;
+   can.inID.zu.error_hard._1.Ucc = false;
+   can.inID.tab.error_tab_1._69 = true;
+
+   can.inID.tab.t_cell_max = -20;
+   can.inID.zu.Uin = -100;
+   can.inID.zu.Iin = -25;
+
+   can.inID.tab.qty_tab = 3;
+
+   can.inID.tab.soc = 87;
+
+   can.inID.tab.state_tab.charge_enable = true;
+   can.inID.tab.state_tab.external_heating = true;
+   can.inID.tab.state_tab.rerun_soft = true;
+   can.inID.tab.state_tab_2.balancing_on = true;
+   can.inID.tab.state_tab_2.bms_on = true;
+
+   can.inID.tab.error_tab_1.t_bms_65 = true;
+   can.inID.tab.error_tab_2_1.contactor = true;
+   can.inID.tab.error_tab_2_2.can = true;
+   can.inID.tab.error_tab_3_1.u_board_18 = true;
+   can.inID.tab.error_tab_3_2.fuse_3 = true;
+
    decltype(auto) buzzer = Buzzer{};
 
    decltype(auto) light_1 = Backlight{&htim1, TIM_CHANNEL_1};
@@ -154,7 +179,7 @@ int main(void)
    decltype(auto) light_3 = Backlight{&htim1, TIM_CHANNEL_3};
    decltype(auto) light_4 = Backlight{&htim1, TIM_CHANNEL_4};
 
-   decltype(auto) lcd = LCD{rs, rw, e, db4, db5, db6, db7};
+   decltype(auto) lcd = LCD{rs, rw, e, db4, db5, db6, db7, flash.light};
    decltype(auto) up = Button<false>{but1};
    decltype(auto) down = Button<false>{but2};
    decltype(auto) ok = Button<false>{but3};
@@ -168,13 +193,13 @@ int main(void)
   while (1)
   {
 //	  saver();
-	  if(can.outID.state.ah) {
+	  if(can.outID.control.ah) {
 		  light_1.bright();
 	  } else {
 		  light_1.pale();
 	  }
 
-	  if(can.outID.state.charger) {
+	  if(can.outID.control.charge) {
 		  light_2.bright();
 	  } else {
 		  light_2.pale();
@@ -587,10 +612,10 @@ void PVD_Config(void) {
     HAL_NVIC_EnableIRQ(PVD_IRQn);
 }
 
-void HAL_PWR_PVDCallback(){
-	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-	TIM1->CCR1 = 6000;
-}
+//void HAL_PWR_PVDCallback(){
+//	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+//	TIM1->CCR1 = 6000;
+//}
 
 /* USER CODE END 4 */
 

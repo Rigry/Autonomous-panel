@@ -1,4 +1,5 @@
 #pragma once
+#pragma GCC diagnostic ignored "-Wwrite-strings"
 
 #include "pin.h"
 #include "delay.h"
@@ -15,6 +16,15 @@ constexpr unsigned char convert_HD44780[64] =
     0xB8,0xB9,0xBA,0xBB,0xBC,0xBD,0x6F,0xBE,
     0x70,0x63,0xBF,0x79,0xE4,0x78,0xE5,0xC0,
     0xC1,0xE6,0xC2,0xC3,0xC4,0xC5,0xC6,0xC7
+};
+
+uint8_t char_map[48] = {
+    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
+   ,0x10,0x10,0x10,0x10,0x10,0x10,0x10,0x10
+   ,0x18,0x18,0x18,0x18,0x18,0x18,0x18,0x18
+   ,0x1C,0x1C,0x1C,0x1C,0x1C,0x1C,0x1C,0x1C
+   ,0x1E,0x1E,0x1E,0x1E,0x1E,0x1E,0x1E,0x1E
+   ,0x1F,0x1F,0x1F,0x1F,0x1F,0x1F,0x1F,0x1F
 };
 
 struct bit_set {
@@ -38,9 +48,10 @@ class LCD : TickSubscriber
    bool centre {false};
 
    std::array<char, 80> screen;
+   std::array<bool, 80> is_symbol;
 
    enum Set {_4_bit_mode   = 0x28, display_on  = 0x0C, dir_shift_right = 0x06,
-             display_clear = 0x01, set_to_zero = 0x80, cursor_zero = 0x02 };
+             display_clear = 0x01, set_to_zero = 0x80, cursor_zero = 0x02, generator = 0x40 };
 
    enum Step {_1, _2, _3} step {Step::_1};
 
@@ -51,6 +62,8 @@ class LCD : TickSubscriber
    Pin& db5;
    Pin& db6;
    Pin& db7;
+
+   uint8_t& light;
 
    Delay delay;
 
@@ -84,8 +97,10 @@ class LCD : TickSubscriber
    }
 
    void data (uint8_t data)
-     {
+   {
         data = data > 191 ? convert_HD44780[data - 192] : data;
+        rs = true;
+        rw = false;
         db4 = data&(1<<4);
         db5 = data&(1<<5);
         db6 = data&(1<<6);
@@ -98,11 +113,29 @@ class LCD : TickSubscriber
         db7 = data&(1<<3);
         e = false;
         e = true;
+   }
+
+   void hd44780 (uint8_t data)
+     {
+          rs = true;
+          rw = false;
+          db4 = data&(1<<4);
+          db5 = data&(1<<5);
+          db6 = data&(1<<6);
+          db7 = data&(1<<7);
+          e = false;
+          e = true;
+          db4 = data&(1<<0);
+          db5 = data&(1<<1);
+          db6 = data&(1<<2);
+          db7 = data&(1<<3);
+          e = false;
+          e = true;
      }
 
 public:
 
-   LCD (Pin& rs, Pin& rw, Pin& e, Pin& db4, Pin& db5, Pin& db6, Pin& db7)
+   LCD (Pin& rs, Pin& rw, Pin& e, Pin& db4, Pin& db5, Pin& db6, Pin& db7, uint8_t& light)
          : rs {rs}
          , rw {rw}
          , e  {e}
@@ -110,31 +143,48 @@ public:
          , db5 {db5}
          , db6 {db6}
          , db7 {db7}
+         , light {light}
          {
         	 init();
+        	 my_symbol();
         	 subscribed = false;
         	 subscribe();
         	 screen.fill(' ');
+        	 is_symbol.fill(false);
         	 HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
-        	 bright(99);
+        	 bright(light);
          }
 
    void notify() override;
    LCD& operator<<(char* s);
    LCD& operator<< (int number);
+   LCD& progress_bar(uint8_t percent);
 //   LCD& operator<< (std::string_view string);
    LCD& set_line   (size_t string);
    LCD& set_cursor (size_t cursor);
    LCD& _10(int number);
    LCD& div_10 (int number);
    LCD& sym(uint8_t s){screen[position] = s; return *this;}
-   LCD& clear() {screen.fill(' '); return *this;}
+   LCD& clear() {screen.fill(' '); is_symbol.fill(false); return *this;}
    void bright(float value) {TIM3->CCR3 = uint16_t(30000 / (float(100) / value));}
 
    LCD& next_line ();
    bool in_begin_line() const {return position % line_size == 0;}
    auto get_line() const {return position / line_size;}
+
+   void my_symbol() {
+   	instruction(generator);
+   	while(delay.ms(1)) {}
+   	for (auto i = 0; i < 48; i++) {
+   		data(char_map[i]);
+   		while(delay.ms(1)) {}
+   	}
+   	while(delay.ms(5)) {}
+   	instruction(set_to_zero);
+   }
 };
+
+
 
 
 void LCD::init()
@@ -147,7 +197,7 @@ void LCD::init()
    strob_e();
    while(delay.ms(1)) {}
 
-   instruction(0x32);
+   instruction (0x32);
    instruction (_4_bit_mode);
    instruction (display_on);
    instruction (dir_shift_right);
@@ -158,11 +208,17 @@ void LCD::init()
    while(delay.ms(5)) {}
 }
 
+
+
 void LCD::notify()
 {
 	   rs = true;
 	   rw = false;
-	   data(screen[index]);
+	   if(not is_symbol[index]) {
+		   data(screen[index]);
+	   } else if (is_symbol[index]) {
+		   hd44780(screen[index]);
+	   }
 	   index++;
 	   if(index == 20)
 		   index = 40;
@@ -173,6 +229,19 @@ void LCD::notify()
 	   if(index >= 80) {
 		   index = 0;
 	   }
+}
+
+LCD& LCD::progress_bar(uint8_t percent) {
+
+	for (auto i = 0; i < percent / 5; i++) {
+		sym(0x05); position++;
+	}
+	sym(percent % 5);
+	if(position < 79) {
+		position++;
+		next_line();
+	}
+	return *this;
 }
 
 LCD& LCD::next_line ()

@@ -1,10 +1,20 @@
 #pragma once
+
 #include <utility>
 #include "lcd.h"
 #include "screen_common.h"
 #include <limits>
 
 constexpr std::string_view null_to_string (int i) {return std::string_view{};}
+
+constexpr auto on = std::array {
+	"отключить",
+	"включить"
+};
+
+constexpr auto on_off_to_string(int i) {
+	return on[i];
+}
 
 template<class T>
 using Max = Construct_wrapper<T>;
@@ -32,8 +42,9 @@ public:
       , lcd            {lcd}
       , buzzer         {buzzer}
       , eventers       {eventers}
-      , enter_callback {enter_callback.value}
+
       , ok_callback    {ok_callback.value}
+      , enter_callback {enter_callback.value}
       , name           {name}
       , var            {var}
       , tmp            {var}
@@ -41,6 +52,7 @@ public:
     {}
 
     void init() override {
+    	lcd.clear();
         eventers.up    ([this]{ up();   buzzer.brief();});
         eventers.down  ([this]{ down(); buzzer.brief();});
         eventers.increment_up   ([this](auto i){   up(i); });
@@ -58,10 +70,11 @@ public:
         eventers.enter   ([this]{ enter_callback(); buzzer.brief();});
         lcd.set_line(0) << name; lcd.next_line();
         tmp = var;
-//        if (to_string != null_to_string)
-//            lcd.set_line(1) << to_string(tmp) << next_line;
-//        else
+//        if (to_string != "0") {
+//            lcd.set_line(1) << to_string(tmp); lcd.next_line();
+//        } else {
             lcd << tmp; lcd.next_line();
+//        }
         lcd << "Ок     " << "~" << "Сохранить"; lcd.next_line();
         lcd << "Меню   " << "~" << "Отмена"; lcd.next_line();
     }
