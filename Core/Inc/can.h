@@ -310,6 +310,10 @@ class CAN : TickSubscriber
   enum Command{balancing_off = 0x10, balancing_on = 0x11} command {balancing_off};
   bool need_transmit_09{false};
 
+  std::array<uint8_t, 4> tab {0};
+
+  uint8_t number_tab{0};
+
   uint16_t time{0};
   uint16_t time_refresh{0};
 
@@ -428,6 +432,14 @@ public:
 		HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &RxHeader, RxData);
 		start_transmit();
 
+		auto half_id = RxHeader.StdId & 0x0F;
+
+		if( half_id == 0x04 ) {
+			auto i = RxHeader.StdId >> 4;
+			if(i < 4)
+				tab[i] = i;
+		}
+
 		switch(RxHeader.StdId) {
 			case 0x12:
 				inID.zu.Uin  = ((RxData[0] << 8) | RxData[1]) - 2048;
@@ -448,50 +460,57 @@ public:
 				inID.zu.t_cpu   = RxData[6];
 				inID.zu.t_mhv   = RxData[7];
 		    break;
-			case 0x08:
-				inID.tab.u_state_tab = RxData[0];
-				inID.tab.soc       = RxData[1];
-				inID.tab.u_board   = (RxData[3] << 8) | RxData[2];
-				inID.tab.u_assebly = (RxData[5] << 8) | RxData[4];
-				inID.tab.qty_tab   = RxData[6];
-			break;
-			case 0x07:
-				inID.tab.u_contactor = (RxData[1] << 8) | RxData[0];
-				inID.tab.i_needs_1 = RxData[2];
-				inID.tab.i_needs_2 = RxData[3];
-				inID.tab.i_max_discharger = RxData[4];
-				inID.tab.i_max_charger = RxData[5];
-				inID.tab.energy = (RxData[7] << 8) | RxData[6];
-			break;
-			case 0x06:
-				inID.tab.u_cell_max = (RxData[1] << 8) | RxData[0];
-				inID.tab.u_cell_min = (RxData[3] << 8) | RxData[2];
-				inID.tab.u_cell_avarage = (RxData[5] << 8) | RxData[4];
-				inID.tab.u_state_tab_2 = RxData[6];
-				inID.tab.u_error_tab_1 = RxData[7];
-			break;
-			case 0x05:
-				inID.tab.t_cell_max  = RxData[0];
-				inID.tab.t_cell_min  = RxData[1];
-				inID.tab.t_bms_max   = RxData[2];
-				inID.tab.t_bms_min   = RxData[3];
-				inID.tab.t_contr_bms = RxData[4];
-				inID.tab.t_1         = RxData[5];
-				inID.tab.t_2         = RxData[6];
-				inID.tab.t_3         = RxData[7];
-			break;
-			case 0x04:
-				inID.tab.u_error_tab_2_1 = RxData[0];
-				inID.tab.u_error_tab_2_2 = RxData[1];
-				inID.tab.u_error_tab_3_1 = RxData[2];
-				inID.tab.u_error_tab_3_2 = RxData[3];
-				inID.tab.charge_current = RxData[5];
-				inID.tab.discharge_current = RxData[4] * 2;
-			break;
+			default:
+				if(RxHeader.StdId == ((number_tab << 4) | 0x08)) {
+					inID.tab.u_state_tab = RxData[0];
+					inID.tab.soc       = RxData[1];
+					inID.tab.u_board   = (RxData[3] << 8) | RxData[2];
+					inID.tab.u_assebly = (RxData[5] << 8) | RxData[4];
+					inID.tab.qty_tab   = RxData[6];
+				} else if (RxHeader.StdId == ((number_tab << 4) | 0x07)) {
+					inID.tab.u_contactor = (RxData[1] << 8) | RxData[0];
+					inID.tab.i_needs_1 = RxData[2];
+					inID.tab.i_needs_2 = RxData[3];
+					inID.tab.i_max_discharger = RxData[4];
+					inID.tab.i_max_charger = RxData[5];
+					inID.tab.energy = (RxData[7] << 8) | RxData[6];
+				} else if (RxHeader.StdId == ((number_tab << 4) | 0x06)) {
+					inID.tab.u_cell_max = (RxData[1] << 8) | RxData[0];
+					inID.tab.u_cell_min = (RxData[3] << 8) | RxData[2];
+					inID.tab.u_cell_avarage = (RxData[5] << 8) | RxData[4];
+					inID.tab.u_state_tab_2 = RxData[6];
+					inID.tab.u_error_tab_1 = RxData[7];
+				} else if (RxHeader.StdId == ((number_tab << 4) | 0x05)) {
+					inID.tab.t_cell_max  = RxData[0];
+					inID.tab.t_cell_min  = RxData[1];
+					inID.tab.t_bms_max   = RxData[2];
+					inID.tab.t_bms_min   = RxData[3];
+					inID.tab.t_contr_bms = RxData[4];
+					inID.tab.t_1         = RxData[5];
+					inID.tab.t_2         = RxData[6];
+					inID.tab.t_3         = RxData[7];
+				} else if (RxHeader.StdId == ((number_tab << 4) | 0x04)) {
+					inID.tab.u_error_tab_2_1 = RxData[0];
+					inID.tab.u_error_tab_2_2 = RxData[1];
+					inID.tab.u_error_tab_3_1 = RxData[2];
+					inID.tab.u_error_tab_3_2 = RxData[3];
+					inID.tab.charge_current = RxData[5];
+					inID.tab.discharge_current = RxData[4] * 2;
+				}
+				break;
 		}
 	}
 
   bool is_work(){ return work; }
+
+  auto max_tab() {
+	  std::pair<uint8_t*, uint8_t*> minmax = std::minmax_element(tab.begin(), tab.end());
+	  return *minmax.second;
+  }
+
+  void watch_tab(uint8_t n) {
+	  number_tab = n;
+  }
 
   void start_transmit() {
 		if (not work) {

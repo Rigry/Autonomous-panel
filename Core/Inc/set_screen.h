@@ -5,8 +5,8 @@
 #include "screen_common.h"
 #include <limits>
 
-constexpr std::string_view null_to_string (int i) {return std::string_view{};}
-
+//constexpr std::string_view null_to_string (int i) {return std::string_view{};}
+//
 constexpr auto on = std::array {
 	"отключить",
 	"включить"
@@ -35,16 +35,16 @@ public:
         , T& var
         , Min<T> min
         , Max<T> max
-    	, Enter_callback     enter_callback
+    	, Out_callback       out_callback
 		, Ok_callback        ok_callback = Ok_callback{nullptr}
     ) : min            {min.value}
       , max            {max.value}
       , lcd            {lcd}
       , buzzer         {buzzer}
       , eventers       {eventers}
-
+      , out_callback   {out_callback.value}
       , ok_callback    {ok_callback.value}
-      , enter_callback {enter_callback.value}
+
       , name           {name}
       , var            {var}
       , tmp            {var}
@@ -64,10 +64,10 @@ public:
             	buzzer.brief();
                 return;
             }
-            enter_callback();
+            out_callback();
             buzzer.brief();
         });
-        eventers.enter   ([this]{ enter_callback(); buzzer.brief();});
+        eventers.out   ([this]{ out_callback(); buzzer.brief();});
         lcd.set_line(0) << name; lcd.next_line();
         tmp = var;
 //        if (to_string != "0") {
@@ -75,7 +75,7 @@ public:
 //        } else {
             lcd << tmp; lcd.next_line();
 //        }
-        lcd << "Ок     " << "~" << "Сохранить"; lcd.next_line();
+        lcd << "Ок     " << "~" << "Выбрать"; lcd.next_line();
         lcd << "Меню   " << "~" << "Отмена"; lcd.next_line();
     }
 
@@ -95,12 +95,16 @@ public:
     T min;
     T max;
 
+    void set_max(T v) {
+    	max = v;
+    }
+
 private:
     LCD& lcd;
     Buzzer& buzzer;
     Buttons_events eventers;
     Callback<>     ok_callback;
-    Callback<>     enter_callback;
+    Callback<>     out_callback;
     char* name;
     T& var;
     T tmp;

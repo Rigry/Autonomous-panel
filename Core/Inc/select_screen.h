@@ -33,6 +33,7 @@ public:
         eventers.down  ([this]{ down(); buzzer.brief(); });
         eventers.enter ([this]{ lines[line_n].callback(); buzzer.brief();});
         eventers.out   ([this]{ out_callback(); buzzer.brief(); });
+//        line_n = 0;
         redraw();
     }
 
@@ -292,6 +293,8 @@ public:
         eventers.down  ([this]{  if(event){down(); buzzer.brief();} });
         eventers.enter ([this]{ });
         eventers.out   ([this]{ out_callback(); buzzer.brief(); });
+        line_n = 0;
+        carriage_line = 0;
         redraw();
     }
 

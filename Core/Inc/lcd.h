@@ -67,6 +67,8 @@ class LCD : TickSubscriber
 
    Delay delay;
 
+   bool init_{false};
+
    static constexpr size_t line_size = 20;
    static constexpr size_t screen_size = 80;
 
@@ -146,6 +148,7 @@ public:
          , light {light}
          {
         	 init();
+        	 while(not init_){}
         	 my_symbol();
         	 subscribed = false;
         	 subscribe();
@@ -206,6 +209,7 @@ void LCD::init()
    instruction (set_to_zero);
 
    while(delay.ms(5)) {}
+   init_ = true;
 }
 
 

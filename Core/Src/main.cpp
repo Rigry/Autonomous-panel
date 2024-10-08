@@ -68,7 +68,7 @@ static void MX_TIM1_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
-static void PVD_Config();
+//static void PVD_Config();
 
 /* USER CODE END PFP */
 
@@ -110,12 +110,12 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_ADC1_Init();
-  MX_CAN1_Init();
+
   MX_TIM1_Init();
   MX_TIM3_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
-  PVD_Config();
+//  PVD_Config();
 
    struct Flash_data{
 	  uint16_t current = 30;
@@ -141,36 +141,9 @@ int main(void)
    decltype(auto) db6         = Pin{GPIOA, DB6_Pin            };
    decltype(auto) db7         = Pin{GPIOA, DB7_Pin            };
 
+   decltype(auto) lcd = LCD{rs, rw, e, db4, db5, db6, db7, flash.light};
+
    decltype(auto) adc = ADC_ {adc_callback, 1, 100};
-//
-//   decltype(auto) uart = UART_<>{led_can};
-//
-   decltype(auto) can = CAN<In_id, Out_id>{led_can, interrupt_can_rx, 250};
-
-   can.inID.zu.U_error_hard = 0xFFFF;
-   can.inID.zu.error_soft._1.Cap = true;
-   can.inID.zu.error_hard._1.Ucc = false;
-   can.inID.tab.error_tab_1._69 = true;
-
-   can.inID.tab.t_cell_max = -20;
-   can.inID.zu.Uin = -100;
-   can.inID.zu.Iin = -25;
-
-   can.inID.tab.qty_tab = 3;
-
-   can.inID.tab.soc = 87;
-
-   can.inID.tab.state_tab.charge_enable = true;
-   can.inID.tab.state_tab.external_heating = true;
-   can.inID.tab.state_tab.rerun_soft = true;
-   can.inID.tab.state_tab_2.balancing_on = true;
-   can.inID.tab.state_tab_2.bms_on = true;
-
-   can.inID.tab.error_tab_1.t_bms_65 = true;
-   can.inID.tab.error_tab_2_1.contactor = true;
-   can.inID.tab.error_tab_2_2.can = true;
-   can.inID.tab.error_tab_3_1.u_board_18 = true;
-   can.inID.tab.error_tab_3_2.fuse_3 = true;
 
    decltype(auto) buzzer = Buzzer{};
 
@@ -179,11 +152,37 @@ int main(void)
    decltype(auto) light_3 = Backlight{&htim1, TIM_CHANNEL_3};
    decltype(auto) light_4 = Backlight{&htim1, TIM_CHANNEL_4};
 
-   decltype(auto) lcd = LCD{rs, rw, e, db4, db5, db6, db7, flash.light};
+
    decltype(auto) up = Button<false>{but1};
    decltype(auto) down = Button<false>{but2};
    decltype(auto) ok = Button<false>{but3};
    decltype(auto) enter = Button<false>{but4};
+   MX_CAN1_Init();
+   decltype(auto) can = CAN<In_id, Out_id>{led_can, interrupt_can_rx, 250};
+   can.inID.zu.U_error_hard = 0xFFFF;
+  //   can.inID.zu.error_soft._1.Cap = true;
+  //   can.inID.zu.error_hard._1.Ucc = false;
+  //   can.inID.tab.error_tab_1._69 = true;
+  //
+  //   can.inID.tab.t_cell_max = -20;
+  //   can.inID.zu.Uin = -100;
+  //   can.inID.zu.Iin = -25;
+  //
+  //   can.inID.tab.qty_tab = 3;
+  //
+  //   can.inID.tab.soc = 87;
+  //
+  //   can.inID.tab.state_tab.charge_enable = true;
+  //   can.inID.tab.state_tab.external_heating = true;
+  //   can.inID.tab.state_tab.rerun_soft = true;
+  //   can.inID.tab.state_tab_2.balancing_on = true;
+  //   can.inID.tab.state_tab_2.bms_on = true;
+  //
+  //   can.inID.tab.error_tab_1.t_bms_65 = true;
+  //   can.inID.tab.error_tab_2_1.contactor = true;
+  //   can.inID.tab.error_tab_2_2.can = true;
+  //   can.inID.tab.error_tab_3_1.u_board_18 = true;
+  //   can.inID.tab.error_tab_3_2.fuse_3 = true;
    decltype(auto) menu = Menu<Flash_data>{flash, adc, lcd, buzzer, can, up, down, ok, enter};
 
   /* USER CODE END 2 */
@@ -595,22 +594,22 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-void PVD_Config(void) {
-    // Настройка структуры PVD
-    PWR_PVDTypeDef sConfigPVD;
-    sConfigPVD.PVDLevel = PWR_PVDLEVEL_7;  // Уровень порога (например, 2.9V)
-    sConfigPVD.Mode = PWR_PVD_MODE_IT_RISING_FALLING;  // Прерывание при росте и падении напряжения
-
-    // Инициализация PVD
-    HAL_PWR_ConfigPVD(&sConfigPVD);
-
-    // Включение PVD
-    HAL_PWR_EnablePVD();
-
-    // Включение прерывания от PVD
-    HAL_NVIC_SetPriority(PVD_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(PVD_IRQn);
-}
+//void PVD_Config(void) {
+//    // Настройка структуры PVD
+//    PWR_PVDTypeDef sConfigPVD;
+//    sConfigPVD.PVDLevel = PWR_PVDLEVEL_7;  // Уровень порога (например, 2.9V)
+//    sConfigPVD.Mode = PWR_PVD_MODE_IT_RISING_FALLING;  // Прерывание при росте и падении напряжения
+//
+//    // Инициализация PVD
+//    HAL_PWR_ConfigPVD(&sConfigPVD);
+//
+//    // Включение PVD
+//    HAL_PWR_EnablePVD();
+//
+//    // Включение прерывания от PVD
+//    HAL_NVIC_SetPriority(PVD_IRQn, 0, 0);
+//    HAL_NVIC_EnableIRQ(PVD_IRQn);
+//}
 
 //void HAL_PWR_PVDCallback(){
 //	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);

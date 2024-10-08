@@ -66,7 +66,7 @@ struct Menu : TickSubscriber {
           lcd, buzzer, buttons_events
         , Out_callback          { [this]{ change_screen(main_screen);   }}
         , Line {"Параметры ЗУ"   ,[this]{ change_screen(param_ZU);      }}
-        , Line {"Параметры ТАБ"  ,[this]{ change_screen(select_tab);    }}
+        , Line {"Параметры ТАБ"  ,[this]{ change_screen(select_tab); select_tab.set_max(can.max_tab());}}
         , Line {"Управление"     ,[this]{ change_screen(config_screen); }}
     };
 
@@ -80,14 +80,21 @@ struct Menu : TickSubscriber {
         , Line {"Токи"        ,[this]{ change_screen(i_zu); }}
     };
 
-    Select_screen<4> select_tab {
-               lcd, buzzer, buttons_events
-            , Out_callback     { [this]{ change_screen(main_select);  }}
-            , Line {"Ведущая  " ,[this]{ change_screen(param_TAB); }}
-            , Line {"Ведомая 1" ,[this]{ change_screen(param_TAB); }}
-            , Line {"Ведомая 2" ,[this]{ change_screen(param_TAB); }}
-            , Line {"Ведомая 3" ,[this]{ change_screen(param_TAB); }}
-        };
+    uint8_t tab{0};
+        Set_screen<uint8_t> select_tab {
+                lcd, buzzer, buttons_events
+              , "Таб для просмотра"
+              , tab
+              , Min<uint8_t>{0}, Max<uint8_t>{3}
+              , Out_callback    { [this]{ change_screen(main_select); can.watch_tab(0); }}
+              , Ok_callback       { [this]{
+               	change_screen(wait_screen);
+               	can.watch_tab(tab);
+
+        }}
+    };
+
+    Wait_screen wait_screen {lcd, buzzer, [this] {change_screen(param_TAB);}};
 
     List_screen<uint16_t, 10> state_zu {
     	   lcd, buzzer, buttons_events
@@ -178,7 +185,7 @@ struct Menu : TickSubscriber {
        , Name_value {"MHV   ", can.inID.zu.t_mhv}
     };
 
-    Select_screen<6> param_TAB {
+    Select_screen<5> param_TAB {
            lcd, buzzer, buttons_events
         , Out_callback        { [this]{ change_screen(select_tab); }}
         , Line {"Ошибки"       ,[this]{ change_screen(error_tab); }}
@@ -186,7 +193,7 @@ struct Menu : TickSubscriber {
         , Line {"Температуры"  ,[this]{ change_screen(t_tab); }}
         , Line {"Напряжения"   ,[this]{ change_screen(u_tab); }}
         , Line {"Токи"         ,[this]{ change_screen(i_tab); }}
-        , Line {"Другие данные",[this]{  }}
+//        , Line {"Другие данные",[this]{  }}
     };
 
     List_screen<uint8_t, 14> state_tab {
@@ -291,7 +298,7 @@ struct Menu : TickSubscriber {
            lcd, buzzer, buttons_events
         , Out_callback           { [this]{ change_screen(main_select);            }}
         , Line {"ток заряда"      ,[this]{ change_screen(I_set);                  }}
-        , Line {"балансировка"    ,[this]{ /*change_screen(Forced_balancing_screen);*/}}
+        , Line {"балансировка"    ,[this]{ change_screen(Forced_balancing_screen);}}
         , Line {"яркость экрана"  ,[this]{ change_screen(Light_set);              }}
     };
 
@@ -300,36 +307,38 @@ struct Menu : TickSubscriber {
           , "яркость в %"
           , flash.light
           , Min<uint8_t>{1}, Max<uint8_t>{100}
-          , Enter_callback    { [this]{ change_screen(config_screen);  }}
+          , Out_callback    { [this]{ change_screen(config_screen);  }}
           , Ok_callback       { [this]{
           	change_screen(config_screen);
           	lcd.bright(flash.light);
           }}
      };
 
-//    Set_screen<int, on_off_to_string> Forced_balancing_screen {
-//            lcd, buzzer, buttons_events
-//          , "балансировка"
-//          , on
-//          , Min<int>{0}, Max<int>{1}
-//          , Enter_callback    { [this]{ change_screen(config_screen);  }}
-//          , Ok_callback       { [this]{
-//           	change_screen(config_screen);
-////           	if(on == "включить")
-////           		can.forced_balancing_on();
-////           	else
-////           	    can.forced_balancing_ff();
-//         }}
-//    };
+    uint8_t on{10};
+    Set_screen<uint8_t> Forced_balancing_screen {
+            lcd, buzzer, buttons_events
+          , "балансировка"
+          , on
+          , Min<uint8_t>{10}, Max<uint8_t>{11}
+          , Out_callback      { [this]{ change_screen(config_screen); }}
+          , Ok_callback       { [this]{
+           	change_screen(config_screen);
+           	if(on == 11)
+           		can.forced_balancing_on();
+           	else
+           	    can.forced_balancing_off();
+         }}
+    };
 
     uint16_t current{flash.current};
     Set_screen<uint16_t> I_set {
            lcd, buzzer, buttons_events
-         , "ток"
+         , "Ток заряда"
          , flash.current
-         , Min<uint16_t>{1}, Max<uint16_t>{200}
-         , Enter_callback    { [this]{ change_screen(config_screen);  }}
+         , Min<uint16_t>{10}, Max<uint16_t>{100}
+         , Out_callback      { [this]{ change_screen(config_screen);  }}
          , Ok_callback       { [this]{
+        	 can.outID.charge_current = flash.current;
         	 change_screen(config_screen);
          }}
      };
@@ -346,9 +355,9 @@ struct Menu : TickSubscriber {
         current_screen->init();
     }
 
-    std::array<Name_value<uint8_t>, 1> other_tab {
-        Name_value {"Уровень заряда ", can.inID.tab.soc}
-    };
+//    std::array<Name_value<uint8_t>, 1> other_tab {
+//        Name_value {"Уровень заряда ", can.inID.tab.soc}
+//    };
 
 
 };
